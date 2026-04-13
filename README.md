@@ -45,7 +45,7 @@ git clone https://github.com/justood/MutantScope
 cd MutantScope
 
 Install dependencies:
-pip install flask pytest coverage cosmic-ray
+pip install -r requirements.txt
 
 Running the Application
 Start the Flask app:
