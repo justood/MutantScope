@@ -7,3 +7,5 @@ uploads/
 *.sqlite
 *.zip
 .env
+.DS_Store
+.vscode/

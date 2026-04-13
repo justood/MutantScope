@@ -1,0 +1,4 @@
+flask
+pytest
+coverage
+cosmic-ray
