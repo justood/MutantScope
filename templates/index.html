@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mutation Testing Analyzer</title>
+
+    <!-- basic page styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        input[type="file"] {
+            color: #f9fafb;
+        }
+
+        button,
+        a.button-link {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button:hover,
+        a.button-link:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .metric {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .metric h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .metric p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        pre {
+            background: #0b1220;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        ul {
+            margin-top: 10px;
+        }
+
+        .subtle {
+            color: #9ca3af;
+        }
+
+        .status-success {
+            color: #86efac;
+        }
+
+        .status-error {
+            color: #fca5a5;
+        }
+
+        code {
+            background: #111827;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% set has_program = selected_program and selected_program|trim %}
+
+        <h1>Mutation Testing Analyzer</h1>
+        <p class="subtle">Analyze Python programs using tests, coverage, and mutation testing.</p>
+
+        <!-- upload section -->
+        <div class="card">
+            <h2>Upload Project ZIP</h2>
+            <p class="subtle">
+                Upload a ZIP file containing a Python project folder with at least one
+                <code>.py</code> file and a <code>tests/</code> subfolder containing test files.
+            </p>
+
+            <form method="POST" action="{{ url_for('upload_project') }}" enctype="multipart/form-data">
+                <label for="project_zip">Select ZIP file:</label>
+                <div class="row" style="margin-top: 10px;">
+                    <input
+                        type="file"
+                        id="project_zip"
+                        name="project_zip"
+                        accept=".zip"
+                        required
+                        title="Upload a ZIP file containing the Python project"
+                    />
+                    <button type="submit">Upload ZIP</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- main controls -->
+        <div class="card">
+            <label for="program_folder">Program Folder</label>
+            <div class="row" style="margin-top: 10px;">
+                <input
+                    type="text"
+                    id="program_folder"
+                    name="program_folder"
+                    value="{{ selected_program }}"
+                    readonly placeholder="No project uploaded yet"
+                />
+            </div>
+
+            <!-- action buttons -->
+            <div class="row" style="margin-top: 15px;">
+                <form method="POST" action="{{ url_for('run_step', step='tests') }}">
+                    <input type="hidden" name="program_folder" value="{{ selected_program }}">
+                    <button type="submit" {% if not selected_program %}disabled{% endif %}>Run Tests</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('run_step', step='coverage') }}">
+                    <input type="hidden" name="program_folder" value="{{ selected_program }}">
+                    <button type="submit" {% if not selected_program %}disabled{% endif %}>Run Coverage</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('run_step', step='mutation') }}">
+                    <input type="hidden" name="program_folder" value="{{ selected_program }}">
+                    <button type="submit" {% if not selected_program %}disabled{% endif %}>Run Mutation</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('run_step', step='analyze') }}">
+                    <input type="hidden" name="program_folder" value="{{ selected_program }}">
+                    <button type="submit" {% if not selected_program %}disabled{% endif %}>Analyze Results</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('run_step', step='all') }}">
+                    <input type="hidden" name="program_folder" value="{{ selected_program }}">
+                    <button type="submit" {% if not selected_program %}disabled{% endif %}>Run Full Analysis</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('reset') }}">
+                    <button type="submit">Reset</button>
+                </form>
+
+                {% if coverage_html_exists %}
+                    <a class="button-link" href="{{ url_for('coverage_report') }}" target="_blank">
+                        Open Coverage Report
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- results section -->
+        {% if final_analysis %}
+        <div class="card">
+            <h2>Analysis Summary</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <h3>Coverage</h3>
+                    <p>{{ final_analysis.coverage_percent }}%</p>
+                </div>
+                <div class="metric">
+                    <h3>Total Mutants</h3>
+                    <p>{{ final_analysis.total_mutants }}</p>
+                </div>
+                <div class="metric">
+                    <h3>Killed Mutants</h3>
+                    <p>{{ final_analysis.killed_mutants }}</p>
+                </div>
+                <div class="metric">
+                    <h3>Survived Mutants</h3>
+                    <p>{{ final_analysis.survived_mutants }}</p>
+                </div>
+                <div class="metric">
+                    <h3>Mutation Score</h3>
+                    <p>{{ final_analysis.mutation_score }}%</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 20px;">Interpretation</h3>
+            <ul>
+                {% for line in final_analysis.interpretation %}
+                    <li>{{ line }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="card">
+            <h2>Analysis Summary</h2>
+            <p class="subtle">No analysis results yet. Upload a project and the analysis steps to see results.</p>
+        </div>
+        {% endif %}
+
+        <!-- output log -->
+        {% if output %}
+        <div class="card">
+            <h2 class="{% if status == 'success' %}status-success{% elif status == 'error' %}status-error{% endif %}">
+                {% if status == "success" %}
+                    Status: Success
+                {% elif status == "error" %}
+                    Status: Error
+                {% else %}
+                    Latest Output
+                {% endif %}
+            </h2>
+            <pre>{{ output }}</pre>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
