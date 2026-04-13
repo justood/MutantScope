@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 import shutil
 import subprocess
 import sys
@@ -51,6 +52,30 @@ def load_json_file(path: Path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
     
+# Helper function  to remove read-only files on Windows when trying to delete the coverage_html folder
+def remove_readonly(func, path, _):
+    # Make locked/read only files writable, then retry deleting
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+# Helper function to safely remove a file, handling read-only files on Windows
+def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+# Helper function to safely remove a directory tree, handling read-only files on Windows
+def safe_rmtree(path):
+        if path.exists():
+            shutil.rmtree(path, onerror=remove_readonly)
+
+# Walk through the extracted folders and remove any __pycache__ or .pytest_cache folders to avoid permission issues on Windows when trying to delete them later
+def cleanup_cache_folders(base_path: Path):
+    for root, dirs, _ in os.walk(base_path, topdown=False):
+        root_path = Path(root)
+        for folder_name in dirs:
+            if folder_name in {".pytest_cache", "__pycache__"}:
+                safe_rmtree(root_path / folder_name)
+    
 # Clear the old report files to make sure there isn't overlap
 def clear_old_reports():
     for filename in ["final_analysis.json", "final_analysis.txt", "coverage_summary.json", "results.txt", "session.sqlite", "temp_cosmic_config.toml"]:
@@ -61,7 +86,7 @@ def clear_old_reports():
 
     coverage_html_folder = reports_folder / "coverage_html"
     if coverage_html_folder.exists():
-        shutil.rmtree(coverage_html_folder)
+        safe_rmtree(coverage_html_folder)
 
 # Combine the stdout and stderr from the script into one string for display
 def build_output(result_dict):
@@ -124,7 +149,9 @@ def extract_uploaded_zip(zip_path: Path):
     extract_base = uploads_folder / zip_path.stem
 
     if extract_base.exists():
-        shutil.rmtree(extract_base)
+        # Make sure to remove any __pycache__ or .pytest_cache folders before trying to delete, since they can cause permission errors on Windows
+        cleanup_cache_folders(extract_base)
+        safe_rmtree(extract_base)
     extract_base.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
@@ -136,7 +163,7 @@ def extract_uploaded_zip(zip_path: Path):
     for root, dirs, files in os.walk(extract_base):
         root_path = Path(root)
         
-        # Skip hidden folders and __MACOSX folder
+        # Skip hidden folders and __MACOSX folder 
         parts = root_path.parts
         if "__MACOSX" in parts or any(part.startswith(".") for part in parts):
             continue
