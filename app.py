@@ -184,6 +184,8 @@ def extract_uploaded_zip(zip_path: Path):
     candidates.sort(key=lambda p: len(p.parts))
     return candidates[0]
 
+# Define the routes for the FLask app
+# The main page shows the upload form and the output from the scripts, as well as the final analysis results if they exist
 @app.route("/")
 def index():
     return render_main_page(
@@ -191,20 +193,22 @@ def index():
         output=None,
         status="info"
     )
-
+# The upload route handles the uploaded ZIP file, extracts it, checks for the project structure, and sets the selected program in the sessio
 @app.route("/upload", methods=["POST"])
 def upload_project():
     uploaded_file = request.files.get("project_zip")
 
+    # Check if a file was uploaded and if it has a filename
     if not uploaded_file or uploaded_file.filename == "":
         return render_main_page(
             selected_program=session.get("selected_program", ""),
             output="No ZIP file was selected.", 
             status="error"
         )
-    
+     
     filename = secure_filename(uploaded_file.filename)
 
+    # Check if the uploaded file is a ZIP file based on the extension
     if not filename.lower().endswith(".zip"):
         return render_main_page(
             selected_program=session.get("selected_program", ""),
@@ -212,14 +216,17 @@ def upload_project():
             status="error"
         )
     
+    # Save the uploaded ZIP file to the uploads folder
     zip_path = uploads_folder / filename
     uploaded_file.save(zip_path)
 
+    # Extract the ZIP file, find the project root, and validate the structure
     try: 
         extracted_project = extract_uploaded_zip(zip_path)
         relative_project_path = extracted_project.relative_to(project_root)
         selected_program = str(relative_project_path)
 
+        # Set the selected program in the session and clear old reports
         session["show_results"] = False
         session["selected_program"] = selected_program
         clear_old_reports()
@@ -230,18 +237,21 @@ def upload_project():
             status="success"
         )
     
+    # Cleanup the uploaded ZIP file after processing
     except Exception as e:
         return render_main_page(
             selected_program=session.get("selected_program", ""),
             output=f"Upload failed: {e}",
             status="error"
         )
-    
+
+# The run_step route handles the different steps of the analysis (running tests, coverage, mutation analysis, and final analysis)     
 @app.route("/run/<step>", methods=["POST"])
 def run_step(step):
     selected_program = request.form.get("program_folder") or session.get("selected_program", "")
     session["selected_program"] = selected_program
 
+    # For all steps except "analyze", validate the project structure before proceeding.
     if step != "analyze":
         _, error = validate_project_structure(selected_program)
         if error:
@@ -252,6 +262,7 @@ def run_step(step):
                 status="error"
             )
         
+    # Depending on the step, run the appropriate script and handle the output and status messages accordingly
     if step == "tests":
         clear_old_reports()
         result = run_script("run_tests.py", selected_program)
@@ -266,6 +277,7 @@ def run_step(step):
     elif step == "coverage":
         clear_old_reports()
 
+        # Make sure tests pass before allowing coverage to run, since coverage depends on the tests and it can be confusing to have a coverage report if the tests aren't working
         test_check = run_script("run_tests.py", selected_program)
         if test_check["returncode"] != 0:
             session["show_results"] = False
@@ -275,6 +287,7 @@ def run_step(step):
                 status="error"
             )
         
+        # If tests pass, run the coverage script and display the results. 
         result = run_script("run_coverage.py", selected_program)
         session["show_results"] = False
         return render_main_page(
@@ -283,9 +296,11 @@ def run_step(step):
             status="success" if result["returncode"] == 0 else "error"
         )
     
+    # For mutation analysis, we require both the tests to pass and the coverage to be successful before allowing it to run
     elif step == "mutation":
         clear_old_reports()
 
+        # First check if tests pass, since mutation analysis depends on the tests and it can be confusing to run mutation analysis if the tests aren't working
         test_check = run_script("run_tests.py", selected_program)
         if test_check["returncode"] != 0:
             session["show_results"] = False
@@ -295,6 +310,7 @@ def run_step(step):
                 status="error"
             )
         
+        # Next, check if coverage passes, since mutation analysis depends on coverage and it can be confusing to run mutation analysis if coverage isn't working
         coverage_check = run_script("run_coverage.py", selected_program)
         if coverage_check["returncode"] != 0:
             session["show_results"] = False
@@ -304,6 +320,7 @@ def run_step(step):
                 status="error"
             )
         
+        # If tests and coverage pass, run the mutation analysis script and display the results
         result = run_script("run_mutation.py", selected_program)
         session["show_results"] = False
         return render_main_page(
@@ -312,10 +329,12 @@ def run_step(step):
             status="success" if result["returncode"] == 0 else "error"
         )
     
+    # check if mutation and coverage data exist before allowing the final analysis to run
     elif step == "analyze":
         coverage_exists = (reports_folder / "coverage_summary.json").exists()
         mutation_exists = (reports_folder / "session.sqlite").exists()
 
+        # If either coverage or mutation data doesn't exist, block the analysis and show an error message 
         if not coverage_exists or not mutation_exists:
             session["show_results"] = False
             return render_main_page(
@@ -324,6 +343,7 @@ def run_step(step):
                 status="error"
             )
         
+        # If both coverage and mutation data exist, run the analysis script and display the results.
         result = run_script("result_analyzer.py")
         session["show_results"] = (result["returncode"] == 0)
 
@@ -333,9 +353,11 @@ def run_step(step):
             status="success" if result["returncode"] == 0 else "error"
         )
     
+    # The "all" step runs all the steps in sequence, but checks after each step to make sure it was successful before proceeding to the next step
     elif step == "all":
         clear_old_reports()
 
+        # First check if tests pass
         test_check = run_script("run_tests.py", selected_program)
         if test_check["returncode"] != 0:
             session["show_results"] = False
@@ -345,9 +367,11 @@ def run_step(step):
                 status="error"
             )
         
+        # If tests pass, run the full analysis script which will run all steps and display the results at the end
         result = run_script("run_all.py", selected_program)
         session["show_results"] = (result["returncode"] == 0)
         
+        # If the full analysis script fails, we want to show the output and error message so the user can understand what went wrong
         return render_main_page(
             selected_program=selected_program,
             output=build_output(result),
@@ -356,16 +380,19 @@ def run_step(step):
     
     return redirect(url_for("index"))
 
+# Route for the coverage report HTML files
 @app.route("/coverage-report")
 def coverage_report():
     coverage_folder = reports_folder / "coverage_html"
     return send_from_directory(coverage_folder, "index.html")
 
+# Route for the coverage report assets (CSS, JS, images, etc.)
 @app.route("/coverage-report/<path:filename>")
 def coverage_report_assets(filename):
     coverage_folder = reports_folder / "coverage_html"
     return send_from_directory(coverage_folder, filename)
 
+# Route to reset the session and clear old reports, allowing the user to start fresh with a new project upload
 @app.route("/reset", methods=["POST"])
 def reset():
     session.pop("show_results", None)
@@ -373,6 +400,7 @@ def reset():
     clear_old_reports()
     return redirect(url_for("index"))
 
+# Run the Flask app
 if __name__ == "__main__":
     app.run(debug=False, use_reloader=False)
 
