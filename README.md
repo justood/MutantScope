@@ -31,11 +31,11 @@ project/
                 test_main_code.py
 
 ## Technologies Used:
-Python 3
-Flask (Web Interface)
-pytest (Unit Testing)
-coverage.py (Code Coverage)
-Cosmic Ray (Mutation Testing)
+- Python
+- Flask (Web Interface)
+- pytest (Unit Testing)
+- coverage.py (Code Coverage)
+- Cosmic Ray (Mutation Testing)
 
 ## Installation:
 
@@ -55,22 +55,22 @@ Then open your browser:
 http://127.0.0.1:5000
 
 ## How It Works:
-Upload a project ZIP
-The system extracts and checks the structure
-Select an action:
+1. Upload a project ZIP
+2. The system extracts and checks the structure
+3. Select an action:
 
-Run Tests - Executes pytest
-Run Coverage - Measures code coverage
-Run Mutation - Applies mutation testing
-Analyze Results - Generates summary
-Run Full Analysis - Runs everything in sequence
+- Run Tests - Executes pytest
+- Run Coverage - Measures code coverage
+- Run Mutation - Applies mutation testing
+- Analyze Results - Generates summary
+- Run Full Analysis - Runs everything in sequence
 
 ## Output:
 The system generates:
-reports/final_analysis.json
-reports/final_analysis.txt
-reports/coverage_summary.json
-reports/coverage_html/ (visual report)
+- reports/final_analysis.json
+- reports/final_analysis.txt
+- reports/coverage_summary.json
+- reports/coverage_html/ (visual report)
 
 ## Interpretation Logic
 The tool compares:
@@ -78,35 +78,35 @@ The tool compares:
 - Mutation Score (how many faults are detected)
 
 ### Example insights:
-High coverage + low mutation = weak tests
-High mutation score = strong fault detection
-Low both = insufficient testing
+- High coverage + low mutation = weak tests
+- High mutation score = strong fault detection
+- Low both = insufficient testing
 
 ## The system prevents:
-Running tools without uploading a project
-Running mutation testing if tests fail
-Running analysis without required data
+- Running tools without uploading a project
+- Running mutation testing if tests fail
+- Running analysis without required data
 
 ## Project Goal:
 Traditional testing metrics like coverage can be misleading.
 
 MutantScope demonstrates that:
-High coverage does not guarantee effective testing.
+- High coverage does not guarantee effective testing.
 
-By combining coverage and mutation testing, we provide a more realistic evaluation of test quality.
+- By combining coverage and mutation testing, we provide a more realistic evaluation of test quality.
 
 ## Example Use Cases:
-Software testing education
-Evaluating test suite quality
-Comparing different test strategies
-Demonstrating mutation testing concepts
+- Software testing education
+- Evaluating test suite quality
+- Comparing different test strategies
+- Demonstrating mutation testing concepts
 
 ## Authors:
-Justivon Dado
-Luke Dolan
+### Justivon Dado
+### Luke Dolan
 
 ## Course: 
-CSI 4370 – Software Verification & Testing
+### CSI 4370 – Software Verification & Testing
 
 ## Notes:
 Sample programs included:
