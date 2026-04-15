@@ -65,6 +65,8 @@ http://127.0.0.1:5000
 - Analyze Results - Generates summary
 - Run Full Analysis - Runs everything in sequence
 
+4. Analyze the results
+
 ## Output:
 The system generates:
 - reports/final_analysis.json
