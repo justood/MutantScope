@@ -168,11 +168,9 @@ def extract_uploaded_zip(zip_path: Path):
         has_tests = "tests" in dirs
         has_py = any(f.endswith(".py") for f in files)
 
-        # If it does, add it to the candidates list
         if has_tests and has_py:
             candidates.append(root_path)
 
-    # If no candidates found, raise an error
     if not candidates:
         raise ValueError("ZIP must contain a project folder with a python file and a tests folder.")
     
@@ -273,7 +271,7 @@ def run_step(step):
     elif step == "coverage":
         clear_old_reports()
 
-        # Make sure tests pass before allowing coverage to run, since coverage depends on the tests and it can be confusing to have a coverage report if the tests aren't working
+        # Make sure tests pass before allowing coverage to run
         test_check = run_script("run_tests.py", selected_program)
         if test_check["returncode"] != 0:
             session["show_results"] = False
@@ -296,7 +294,7 @@ def run_step(step):
     elif step == "mutation":
         clear_old_reports()
 
-        # First check if tests pass, since mutation analysis depends on the tests and it can be confusing to run mutation analysis if the tests aren't working
+        # First check if tests pass
         test_check = run_script("run_tests.py", selected_program)
         if test_check["returncode"] != 0:
             session["show_results"] = False
@@ -306,7 +304,7 @@ def run_step(step):
                 status="error"
             )
         
-        # Next, check if coverage passes, since mutation analysis depends on coverage and it can be confusing to run mutation analysis if coverage isn't working
+        # check if coverage passes
         coverage_check = run_script("run_coverage.py", selected_program)
         if coverage_check["returncode"] != 0:
             session["show_results"] = False
@@ -330,7 +328,7 @@ def run_step(step):
         coverage_exists = (reports_folder / "coverage_summary.json").exists()
         mutation_exists = (reports_folder / "session.sqlite").exists()
 
-        # If either coverage or mutation data doesn't exist, block the analysis and show an error message 
+        # If either coverage or mutation data doesn't exist block the analysis 
         if not coverage_exists or not mutation_exists:
             session["show_results"] = False
             return render_main_page(
