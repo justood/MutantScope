@@ -265,7 +265,7 @@ def run_step(step):
         return render_main_page(
             selected_program=selected_program,
             output=build_output(result),
-            status="Tests ran successfully" if result["returncode"] == 0 else "error"
+            status="success" if result["returncode"] == 0 else "error"
         )
     
     elif step == "coverage":
