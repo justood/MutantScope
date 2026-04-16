@@ -58,10 +58,6 @@ def remove_readonly(func, path, _):
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
-# Helper function to safely remove a file, handling read-only files on Windows
-def remove_readonly(func, path, _):
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
 
 # Helper function to safely remove a directory tree, handling read-only files on Windows
 def safe_rmtree(path):
@@ -353,7 +349,6 @@ def run_step(step):
             status="success" if result["returncode"] == 0 else "error"
         )
     
-    # The "all" step runs all the steps in sequence, but checks after each step to make sure it was successful before proceeding to the next step
     elif step == "all":
         clear_old_reports()
 
@@ -367,11 +362,11 @@ def run_step(step):
                 status="error"
             )
         
-        # If tests pass, run the full analysis script which will run all steps and display the results at the end
+        # If tests pass, run the full analysis script 
         result = run_script("run_all.py", selected_program)
         session["show_results"] = (result["returncode"] == 0)
         
-        # If the full analysis script fails, we want to show the output and error message so the user can understand what went wrong
+        # Show the output of why the full analysis failed if it did
         return render_main_page(
             selected_program=selected_program,
             output=build_output(result),
